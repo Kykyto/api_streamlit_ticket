@@ -373,3 +373,4 @@ api.add_resource(Client, '/api/clients/<int:id>')
 
 if __name__ == '__main__':
     app.run(debug=True)
+    db.create_all()
