@@ -1,12 +1,18 @@
 import os
+
+import bcrypt
 from flask import Flask
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 from datetime import datetime
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
+from functools import wraps
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost/projet_api')
+app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
+jwt = JWTManager(app)
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -27,7 +33,7 @@ class UserModel(db.Model):
     birthdate = db.Column(db.Date, nullable=False)
     role = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(80), nullable=False)
+    password = db.Column(db.String(200), nullable=False)
 
     def __repr__(self):
         return (f"User(First name = {self.firstname}, name = {self.name}, birthdate = {self.birthdate}, "
@@ -68,7 +74,7 @@ class ClientModel(db.Model):
     phone = db.Column(db.String(80), unique=True, nullable=False)
 
     def __repr__(self):
-        return (f"User(First name = {self.firstname}, name = {self.name}, company = {self.company}, "
+        return (f"Client(First name = {self.firstname}, name = {self.name}, company = {self.company}, "
                 f"email = {self.email}, phone = {self.phone})")
 
 
@@ -152,6 +158,7 @@ clientFields = {
 
 
 class Users(Resource):
+    @jwt_required()
     @marshal_with(userFields)
     def get(self):
         users = UserModel.query.all()
@@ -159,15 +166,20 @@ class Users(Resource):
 
     @marshal_with(userFields)
     def post(self):
+        current_user = get_jwt_identity()
         args = user_args.parse_args()
 
         if args['role'] not in ['developer', 'reporter', 'admin']:
             abort(400, message="Role must be either 'developer', 'reporter' or 'admin'")
 
+        if args['role'] == 'admin' and current_user['role'] != 'admin':
+            abort(400, message='Only admins can create an admin user.')
+
         birthdate = datetime.strptime(args["birthdate"], '%Y-%m-%d').date()
+        hashed_password = bcrypt.hashpw(args['password'].encode('utf-8'), bcrypt.gensalt())
 
         user = UserModel(firstname=args["firstname"], name=args["name"], birthdate=birthdate,
-                         email=args["email"], role=args["role"], password=args["password"])
+                         email=args["email"], role=args["role"], password=hashed_password.decode('utf8'))
         db.session.add(user)
         db.session.commit()
         users = UserModel.query.all()
@@ -175,6 +187,7 @@ class Users(Resource):
 
 
 class User(Resource):
+    @jwt_required()
     @marshal_with(userFields)
     def get(self, id):
         user = UserModel.query.filter_by(id=id).first()
@@ -182,8 +195,14 @@ class User(Resource):
             abort(404, message="User was not found")
         return user
 
+    @jwt_required()
     @marshal_with(userFields)
     def put(self, id):
+        current_user = get_jwt_identity()
+
+        if current_user['id'] != id and current_user['role'] != 'admin':
+            abort(403, message='You are not authorized to modify this account')
+
         args = user_args.parse_args()
         user = UserModel.query.filter_by(id=id).first()
         if not user:
@@ -193,12 +212,19 @@ class User(Resource):
         user.birthdate = datetime.strptime(args["birthdate"], '%Y-%m-%d').date()
         user.email = args["email"]
         user.role = args["role"]
-        user.password = args["password"]
+        hashed = bcrypt.hashpw(args['password'].encode('utf-8'), bcrypt.gensalt())
+        user.password = hashed.decode('utf8')
         db.session.commit()
         return user
 
+    @jwt_required()
     @marshal_with(userFields)
     def delete(self, id):
+        current_user = get_jwt_identity()
+
+        if current_user['id'] != id and current_user['role'] != 'admin':
+            abort(403, message='You are not authorized to delete this account')
+
         user = UserModel.query.filter_by(id=id).first()
         if not user:
             abort(404, message="User was not found")
@@ -209,11 +235,13 @@ class User(Resource):
 
 
 class Tickets(Resource):
+    @jwt_required()
     @marshal_with(ticketFields)
     def get(self):
         tickets = TicketModel.query.all()
         return tickets
 
+    @jwt_required()
     @marshal_with(ticketFields)
     def post(self):
         args = ticket_args.parse_args()
@@ -230,6 +258,7 @@ class Tickets(Resource):
 
 
 class Ticket(Resource):
+    @jwt_required()
     @marshal_with(ticketFields)
     def get(self, id):
         ticket = TicketModel.query.filter_by(id=id).first()
@@ -237,6 +266,7 @@ class Ticket(Resource):
             abort(404, message="Ticket was not found")
         return ticket
 
+    @jwt_required()
     @marshal_with(ticketFields)
     def put(self, id):
         args = ticket_args.parse_args()
@@ -252,6 +282,7 @@ class Ticket(Resource):
         db.session.commit()
         return ticket
 
+    @jwt_required()
     @marshal_with(ticketFields)
     def delete(self, id):
         ticket = TicketModel.query.filter_by(id=id).first()
@@ -264,11 +295,13 @@ class Ticket(Resource):
 
 
 class Projects(Resource):
+    @jwt_required()
     @marshal_with(projectFields)
     def get(self):
         projects = ProjectModel.query.all()
         return projects
 
+    @jwt_required()
     @marshal_with(projectFields)
     def post(self):
         args = project_args.parse_args()
@@ -281,6 +314,7 @@ class Projects(Resource):
 
 
 class Project(Resource):
+    @jwt_required()
     @marshal_with(projectFields)
     def get(self, id):
         project = ProjectModel.query.filter_by(id=id).first()
@@ -288,6 +322,7 @@ class Project(Resource):
             abort(404, message="Project was not found")
         return project
 
+    @jwt_required()
     @marshal_with(projectFields)
     def put(self, id):
         args = project_args.parse_args()
@@ -298,6 +333,7 @@ class Project(Resource):
         db.session.commit()
         return project
 
+    @jwt_required()
     @marshal_with(projectFields)
     def delete(self, id):
         project = ProjectModel.query.filter_by(id=id).first()
@@ -310,11 +346,13 @@ class Project(Resource):
 
 
 class Clients(Resource):
+    @jwt_required()
     @marshal_with(clientFields)
     def get(self):
         clients = ClientModel.query.all()
         return clients
 
+    @jwt_required()
     @marshal_with(clientFields)
     def post(self):
         args = client_args.parse_args()
@@ -328,6 +366,7 @@ class Clients(Resource):
 
 
 class Client(Resource):
+    @jwt_required()
     @marshal_with(clientFields)
     def get(self, id):
         client = ClientModel.query.filter_by(id=id).first()
@@ -335,6 +374,7 @@ class Client(Resource):
             abort(404, message="Client was not found")
         return client
 
+    @jwt_required()
     @marshal_with(clientFields)
     def put(self, id):
         args = client_args.parse_args()
@@ -349,6 +389,7 @@ class Client(Resource):
         db.session.commit()
         return client
 
+    @jwt_required()
     @marshal_with(clientFields)
     def delete(self, id):
         client = ClientModel.query.filter_by(id=id).first()
@@ -358,6 +399,21 @@ class Client(Resource):
         db.session.commit()
         clients = ClientModel.query.all()
         return clients
+
+
+class Auth(Resource):
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('email', type=str, required=True, help='Email cannot be blank')
+        parser.add_argument('password', type=str, required=True, help='Password cannot be blank')
+        args = parser.parse_args()
+
+        user = UserModel.query.filter_by(email=args['email']).first()
+        if user and bcrypt.checkpw(args['password'].encode('utf-8'), user.password.encode('utf-8')):
+            access_token = create_access_token(identity={'id': user.id, 'role': user.role})
+            return {'access_token': access_token}, 200
+        else:
+            return {'message': 'Invalid credentials'}, 401
 
 
 """
@@ -374,6 +430,7 @@ api.add_resource(Projects, '/api/projects/')
 api.add_resource(Project, '/api/projects/<int:id>')
 api.add_resource(Clients, '/api/clients/')
 api.add_resource(Client, '/api/clients/<int:id>')
+api.add_resource(Auth, '/api/auth/')
 
 if __name__ == '__main__':
     app.run(debug=True)
