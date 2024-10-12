@@ -1,12 +1,16 @@
 import os
 from flask import Flask
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost/projet_api')
+
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
 api = Api(app)
 
 """
@@ -373,4 +377,3 @@ api.add_resource(Client, '/api/clients/<int:id>')
 
 if __name__ == '__main__':
     app.run(debug=True)
-    db.create_all()
