@@ -22,7 +22,7 @@ api = Api(app)
 
 class UserModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    firstName = db.Column(db.String(80), nullable=False)
+    firstname = db.Column(db.String(80), nullable=False)
     name = db.Column(db.String(80), nullable=False)
     birthdate = db.Column(db.Date, nullable=False)
     role = db.Column(db.String(20), nullable=False)
@@ -30,15 +30,15 @@ class UserModel(db.Model):
     password = db.Column(db.String(80), nullable=False)
 
     def __repr__(self):
-        return (f"User(First name = {self.firstName}, name = {self.name}, birthdate = {self.birthdate}, "
+        return (f"User(First name = {self.firstname}, name = {self.name}, birthdate = {self.birthdate}, "
                 f"email = {self.email}, role = {self.role})")
 
 
 class TicketModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    userId = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
-    clientId = db.Column(db.Integer, db.ForeignKey('client_model.id'), nullable=False)
-    projectId = db.Column(db.Integer, db.ForeignKey('project_model.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey('client_model.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('project_model.id'), nullable=False)
     title = db.Column(db.String(80), unique=True, nullable=False)
     description = db.Column(db.String(1000), nullable=False)
     status = db.Column(db.String(80), nullable=False)
@@ -62,13 +62,13 @@ class ProjectModel(db.Model):
 class ClientModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
-    firstName = db.Column(db.String(80), nullable=False)
+    firstname = db.Column(db.String(80), nullable=False)
     company = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(80), unique=True, nullable=False)
     phone = db.Column(db.String(80), unique=True, nullable=False)
 
     def __repr__(self):
-        return (f"User(First name = {self.firstName}, name = {self.name}, company = {self.company}, "
+        return (f"User(First name = {self.firstname}, name = {self.name}, company = {self.company}, "
                 f"email = {self.email}, phone = {self.phone})")
 
 
@@ -79,7 +79,7 @@ class ClientModel(db.Model):
 """
 
 user_args = reqparse.RequestParser()
-user_args.add_argument('firstName', type=str, required=True, help="First name cannot be blank")
+user_args.add_argument('firstname', type=str, required=True, help="First name cannot be blank")
 user_args.add_argument('name', type=str, required=True, help="Name cannot be blank")
 user_args.add_argument('birthdate', type=str, required=True, help="Birthdate cannot be blank")
 user_args.add_argument('email', type=str, required=True, help="Email cannot be blank")
@@ -87,9 +87,9 @@ user_args.add_argument('role', type=str, required=True, help="Role cannot be bla
 user_args.add_argument('password', type=str, required=True, help="Password cannot be blank")
 
 ticket_args = reqparse.RequestParser()
-ticket_args.add_argument('userId', type=int, required=True, help="User ID cannot be blank")
-ticket_args.add_argument('projectId', type=int, required=True, help="Project ID cannot be blank")
-ticket_args.add_argument('clientId', type=int, required=True, help="Client ID cannot be blank")
+ticket_args.add_argument('user_id', type=int, required=True, help="User ID cannot be blank")
+ticket_args.add_argument('project_id', type=int, required=True, help="Project ID cannot be blank")
+ticket_args.add_argument('client_id', type=int, required=True, help="Client ID cannot be blank")
 ticket_args.add_argument('title', type=str, required=True, help="Title cannot be blank")
 ticket_args.add_argument('description', type=str, required=True, help="Description cannot be blank")
 ticket_args.add_argument('status', type=str, required=True, help="Status cannot be blank")
@@ -98,7 +98,7 @@ project_args = reqparse.RequestParser()
 project_args.add_argument('name', type=str, required=True, help="Name cannot be blank")
 
 client_args = reqparse.RequestParser()
-client_args.add_argument('firstName', type=str, required=True, help="First name cannot be blank")
+client_args.add_argument('firstname', type=str, required=True, help="First name cannot be blank")
 client_args.add_argument('name', type=str, required=True, help="Name cannot be blank")
 client_args.add_argument('company', type=str, required=True, help="Company cannot be blank")
 client_args.add_argument('email', type=str, required=True, help="Email cannot be blank")
@@ -112,7 +112,7 @@ client_args.add_argument('phone', type=str, required=True, help="Phone cannot be
 
 userFields = {
     'id': fields.Integer,
-    'firstName': fields.String,
+    'firstname': fields.String,
     'name': fields.String,
     'birthdate': fields.String,
     'email': fields.String,
@@ -122,9 +122,9 @@ userFields = {
 
 ticketFields = {
     "id": fields.Integer,
-    "userId": fields.Integer,
-    "projectId": fields.Integer,
-    "clientId": fields.Integer,
+    "user_id": fields.Integer,
+    "project_id": fields.Integer,
+    "client_id": fields.Integer,
     'title': fields.String,
     'description': fields.String,
     'status': fields.String
@@ -138,7 +138,7 @@ projectFields = {
 clientFields = {
     "id": fields.Integer,
     "name": fields.String,
-    "firstName": fields.String,
+    "firstname": fields.String,
     "company": fields.String,
     "email": fields.String,
     "phone": fields.String
@@ -166,7 +166,7 @@ class Users(Resource):
 
         birthdate = datetime.strptime(args["birthdate"], '%Y-%m-%d').date()
 
-        user = UserModel(firstName=args["firstName"], name=args["name"], birthdate=birthdate,
+        user = UserModel(firstname=args["firstname"], name=args["name"], birthdate=birthdate,
                          email=args["email"], role=args["role"], password=args["password"])
         db.session.add(user)
         db.session.commit()
@@ -188,7 +188,7 @@ class User(Resource):
         user = UserModel.query.filter_by(id=id).first()
         if not user:
             abort(404, message="User was not found")
-        user.firstName = args["firstName"]
+        user.firstname = args["firstname"]
         user.name = args["name"]
         user.birthdate = datetime.strptime(args["birthdate"], '%Y-%m-%d').date()
         user.email = args["email"]
@@ -221,7 +221,7 @@ class Tickets(Resource):
         if args['status'] not in ['ongoing', 'completed', 'cancelled', 'paused']:
             abort(400, message="Status must be either 'ongoing', 'completed', 'cancelled' or 'paused'")
 
-        ticket = TicketModel(userId=args["userId"], projectId=args["projectId"], clientId=args["clientId"],
+        ticket = TicketModel(user_id=args["user_id"], project_id=args["project_id"], client_id=args["client_id"],
                              title=args["title"], description=args["description"], status=args["status"])
         db.session.add(ticket)
         db.session.commit()
@@ -243,9 +243,9 @@ class Ticket(Resource):
         ticket = TicketModel.query.filter_by(id=id).first()
         if not ticket:
             abort(404, message="Ticket was not found")
-        ticket.userId = args["userId"]
-        ticket.clientId = args["clientId"]
-        ticket.projectId = args["projectId"]
+        ticket.user_id = args["user_id"]
+        ticket.client_id = args["client_id"]
+        ticket.project_id = args["project_id"]
         ticket.title = args["title"]
         ticket.description = args["description"]
         ticket.status = args["status"]
@@ -319,7 +319,7 @@ class Clients(Resource):
     def post(self):
         args = client_args.parse_args()
 
-        client = ClientModel(firstName=args["firstName"], name=args["name"], company=args["company"],
+        client = ClientModel(firstname=args["firstname"], name=args["name"], company=args["company"],
                              email=args["email"], phone=args["phone"])
         db.session.add(client)
         db.session.commit()
@@ -342,7 +342,7 @@ class Client(Resource):
         if not client:
             abort(404, message="Client was not found")
         client.name = args["name"]
-        client.firstName = args["firstName"]
+        client.firstname = args["firstname"]
         client.company = args["company"]
         client.email = args["email"]
         client.phone = args["phone"]
