@@ -19,9 +19,5 @@ if st.button("Login"):
     else:
         st.error("Please enter both email and password")
 
-# Function to open the register page
-def open_register_page():
-    st.experimental_rerun()
 
-if st.button("Register"):
-    open_register_page()
+

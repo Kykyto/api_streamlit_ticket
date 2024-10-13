@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from streamlit_option_menu import option_menu
 
 st.set_page_config(page_title="Ticketing Site", page_icon=":ticket:")
@@ -11,39 +12,15 @@ def display_user_info():
 
 display_user_info()
 
-with st.sidebar:
-    selected = option_menu(
-        "Navigation",
-        ["Home","Login Page", "All Projects", "Users Management", "Tickets"],
-        icons=["house", "box-arrow-in-right","inbox_tray", "folder", "person", "ticket"],
-        menu_icon="cast",
-        default_index=0,
-    )
 
-if selected == "Home":
-    st.title("Home Page")
-    st.write("Welcome to the Ticketing Site!")
-    st.header("About This Site")
-    st.write("""
-    This is a ticketing site where you can manage and track your tickets.
-    You can create new tickets, view existing ones, and update their status.
-    Use the navigation bar on the left to explore different sections of the site.
-    """)
+# Présentation du site de ticket
+st.title("Bienvenue sur le site de ticketing")
 
-elif selected == "Login":
-    import login
+st.markdown("""
+Ce projet a été développé par [Jules Pichot](https://github.com/Jules-Pchot) et [Kylian Tarde](https://github.com/KylianTarde).
 
-elif selected == "Register":
-    import register
+- **Jules Pichot** : Développeur Frontend
+- **Kylian Tarde** : Développeur Backend
 
-elif selected == "All Projects":
-    import projects
-
-elif selected == "Users Management":
-    import users
-
-elif selected == "Login Page":
-    import login
-
-elif selected == "Tickets":
-    import tickets
+Le projet utilise une API et une base de données hébergées sur un serveur distant, créées par Kylian. La connexion à ce serveur est nécessaire pour accéder aux services de l'API.
+""")
