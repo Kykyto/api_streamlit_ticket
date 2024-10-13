@@ -2,12 +2,20 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 
 st.set_page_config(page_title="Ticketing Site", page_icon=":ticket:")
+def display_user_info():
+    user_info = st.session_state.get("user_info")
+    if user_info:
+        st.write(f"Logged in as: {user_info['username']}")
+    else:
+        st.write("Not logged in")
+
+display_user_info()
 
 with st.sidebar:
     selected = option_menu(
         "Navigation",
-        ["Home", "All Projects", "Users Management", "Login Page", "Tickets"],
-        icons=["house", "folder", "person", "box-arrow-in-right", "ticket"],
+        ["Home","Login Page","register", "All Projects", "Users Management", "Tickets"],
+        icons=["house", "box-arrow-in-right","inbox_tray", "folder", "person", "ticket"],
         menu_icon="cast",
         default_index=0,
     )
@@ -22,18 +30,20 @@ if selected == "Home":
     Use the navigation bar on the left to explore different sections of the site.
     """)
 
+elif selected == "Login":
+    import login
+
+elif selected == "Register":
+    import register
+
 elif selected == "All Projects":
-    st.title("All Projects")
-    st.write("Content for All Projects page")
+    import projects
 
 elif selected == "Users Management":
-    st.title("Users Management")
-    st.write("Content for Users Management page")
+    import users
 
 elif selected == "Login Page":
-    st.title("Login Page")
-    st.write("Content for Login Page")
+    import login
 
 elif selected == "Tickets":
-    st.title("Tickets")
-    st.write("Content for Tickets page")
+    import tickets
