@@ -12,6 +12,7 @@ def display_user_info():
 
 display_user_info()
 
+st.image("frontend/views/material/working.jpg", caption="Working Image")
 
 # Présentation du site de ticket
 st.title("Bienvenue sur le site de ticketing")
