@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+st.image("frontend/views/material/thumb.jpg")
 
 users_response = requests.get("https://ticket-api-6jhy.onrender.com/api/users/")
 clients_response = requests.get("https://ticket-api-6jhy.onrender.com/api/clients/")

@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from streamlit_option_menu import option_menu
+st.image("frontend/views/material/person.webp")
 
 # Login form
 st.title("Login")

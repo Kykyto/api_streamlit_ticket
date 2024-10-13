@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+st.image("frontend/views/material/tech.jpg")
 
 response = requests.get("https://ticket-api-6jhy.onrender.com/api/tickets/")
 if response.status_code == 200:
