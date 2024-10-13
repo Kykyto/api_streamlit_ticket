@@ -14,7 +14,7 @@ display_user_info()
 with st.sidebar:
     selected = option_menu(
         "Navigation",
-        ["Home","Login Page","register", "All Projects", "Users Management", "Tickets"],
+        ["Home","Login Page", "All Projects", "Users Management", "Tickets"],
         icons=["house", "box-arrow-in-right","inbox_tray", "folder", "person", "ticket"],
         menu_icon="cast",
         default_index=0,
