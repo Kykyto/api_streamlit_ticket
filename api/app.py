@@ -1,31 +1,44 @@
-import os
+#######################
+# IMPORTING LIBRARIES #
+#######################
 
+# Native libraries
+import os
+from datetime import datetime
+
+# Cryptography library
 import bcrypt
+
+# Flask libraries
 from flask import Flask
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
-from datetime import datetime
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
-from functools import wraps
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
+
+##########
+# CONFIG #
+##########
+
+# Create the Flask app
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost/projet_api')
 app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
-jwt = JWTManager(app)
 
+# Initialize the JWT manager, the database and the migration
+jwt = JWTManager(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-
 api = Api(app)
 
-"""
+
 ##########
 # MODELS #
 ##########
-"""
 
-
+# Create the models
+# The User model is used to store the information of the users
 class UserModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     firstname = db.Column(db.String(80), nullable=False)
@@ -40,6 +53,7 @@ class UserModel(db.Model):
                 f"email = {self.email}, role = {self.role})")
 
 
+# The Ticket model is used to store the information of the tickets
 class TicketModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user_model.id'), nullable=False)
@@ -49,6 +63,7 @@ class TicketModel(db.Model):
     description = db.Column(db.String(1000), nullable=False)
     status = db.Column(db.String(80), nullable=False)
 
+    # Relationships
     user = db.relationship('UserModel', backref='tickets')
     client = db.relationship('ClientModel', backref='tickets')
     project = db.relationship('ProjectModel', backref='tickets')
@@ -57,6 +72,7 @@ class TicketModel(db.Model):
         return f"Ticket(Title = {self.title}, description = {self.description}, status = {self.status})"
 
 
+# The Project model is used to store the information of the projects
 class ProjectModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
@@ -65,6 +81,7 @@ class ProjectModel(db.Model):
         return f"Project(Name = {self.name})"
 
 
+# The Client model is used to store the information of the clients
 class ClientModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
@@ -78,12 +95,12 @@ class ClientModel(db.Model):
                 f"email = {self.email}, phone = {self.phone})")
 
 
-"""
 ###########
 # PARSING #
 ###########
-"""
 
+# Create the parsers
+# The user_args parser is used to parse the arguments of the users
 user_args = reqparse.RequestParser()
 user_args.add_argument('firstname', type=str, required=True, help="First name cannot be blank")
 user_args.add_argument('name', type=str, required=True, help="Name cannot be blank")
@@ -92,6 +109,7 @@ user_args.add_argument('email', type=str, required=True, help="Email cannot be b
 user_args.add_argument('role', type=str, required=True, help="Role cannot be blank")
 user_args.add_argument('password', type=str, required=True, help="Password cannot be blank")
 
+# The ticket_args parser is used to parse the arguments of the tickets
 ticket_args = reqparse.RequestParser()
 ticket_args.add_argument('user_id', type=int, required=True, help="User ID cannot be blank")
 ticket_args.add_argument('project_id', type=int, required=True, help="Project ID cannot be blank")
@@ -100,9 +118,11 @@ ticket_args.add_argument('title', type=str, required=True, help="Title cannot be
 ticket_args.add_argument('description', type=str, required=True, help="Description cannot be blank")
 ticket_args.add_argument('status', type=str, required=True, help="Status cannot be blank")
 
+# The project_args parser is used to parse the arguments of the projects
 project_args = reqparse.RequestParser()
 project_args.add_argument('name', type=str, required=True, help="Name cannot be blank")
 
+# The client_args parser is used to parse the arguments of the clients
 client_args = reqparse.RequestParser()
 client_args.add_argument('firstname', type=str, required=True, help="First name cannot be blank")
 client_args.add_argument('name', type=str, required=True, help="Name cannot be blank")
@@ -110,12 +130,13 @@ client_args.add_argument('company', type=str, required=True, help="Company canno
 client_args.add_argument('email', type=str, required=True, help="Email cannot be blank")
 client_args.add_argument('phone', type=str, required=True, help="Phone cannot be blank")
 
-"""
+
 ##########
 # FIELDS #
 ##########
-"""
 
+# Create the fields
+# The userFields field is used to marshal the fields of the users
 userFields = {
     'id': fields.Integer,
     'firstname': fields.String,
@@ -126,6 +147,7 @@ userFields = {
     'password': fields.String
 }
 
+# The ticketFields field is used to marshal the fields of the tickets
 ticketFields = {
     "id": fields.Integer,
     "user_id": fields.Integer,
@@ -136,11 +158,13 @@ ticketFields = {
     'status': fields.String
 }
 
+# The projectFields field is used to marshal the fields of the projects
 projectFields = {
     "id": fields.Integer,
     'name': fields.String
 }
 
+# The clientFields field is used to marshal the fields of the clients
 clientFields = {
     "id": fields.Integer,
     "name": fields.String,
@@ -150,13 +174,13 @@ clientFields = {
     "phone": fields.String
 }
 
-"""
+
 #############
 # RESOURCES #
 #############
-"""
 
-
+# Create the resources
+# The Users resource is used to manage the users
 class Users(Resource):
     @jwt_required()
     @marshal_with(userFields)
@@ -166,16 +190,16 @@ class Users(Resource):
 
     @marshal_with(userFields)
     def post(self):
-        current_user = get_jwt_identity()
         args = user_args.parse_args()
 
-        if args['role'] not in ['developer', 'reporter', 'admin']:
-            abort(400, message="Role must be either 'developer', 'reporter' or 'admin'")
+        # Check if the role is valid
+        if args['role'] not in ['developer', 'reporter']:
+            abort(400, message="Role must be either 'developer'")
 
-        if args['role'] == 'admin' and current_user['role'] != 'admin':
-            abort(400, message='Only admins can create an admin user.')
-
+        # Check if the birthdate is valid
         birthdate = datetime.strptime(args["birthdate"], '%Y-%m-%d').date()
+
+        # Hash the password
         hashed_password = bcrypt.hashpw(args['password'].encode('utf-8'), bcrypt.gensalt())
 
         user = UserModel(firstname=args["firstname"], name=args["name"], birthdate=birthdate,
@@ -186,6 +210,7 @@ class Users(Resource):
         return users, 201
 
 
+# The User resource is used to manage a specific user
 class User(Resource):
     @jwt_required()
     @marshal_with(userFields)
@@ -200,6 +225,7 @@ class User(Resource):
     def put(self, id):
         current_user = get_jwt_identity()
 
+        # Check if the user is authorized to modify the account
         if current_user['id'] != id and current_user['role'] != 'admin':
             abort(403, message='You are not authorized to modify this account')
 
@@ -212,8 +238,10 @@ class User(Resource):
         user.birthdate = datetime.strptime(args["birthdate"], '%Y-%m-%d').date()
         user.email = args["email"]
         user.role = args["role"]
-        hashed = bcrypt.hashpw(args['password'].encode('utf-8'), bcrypt.gensalt())
-        user.password = hashed.decode('utf8')
+        if args['password'] != '':
+            # Hash the password
+            hashed = bcrypt.hashpw(args['password'].encode('utf-8'), bcrypt.gensalt())
+            user.password = hashed.decode('utf8')
         db.session.commit()
         return user
 
@@ -222,7 +250,8 @@ class User(Resource):
     def delete(self, id):
         current_user = get_jwt_identity()
 
-        if current_user['id'] != id and current_user['role'] != 'admin':
+        # Only admins can delete accounts!
+        if current_user['role'] != 'admin':
             abort(403, message='You are not authorized to delete this account')
 
         user = UserModel.query.filter_by(id=id).first()
@@ -234,6 +263,7 @@ class User(Resource):
         return users
 
 
+# The Tickets resource is used to manage the tickets
 class Tickets(Resource):
     @jwt_required()
     @marshal_with(ticketFields)
@@ -246,6 +276,7 @@ class Tickets(Resource):
     def post(self):
         args = ticket_args.parse_args()
 
+        # Check if the status is valid
         if args['status'] not in ['ongoing', 'completed', 'cancelled', 'paused']:
             abort(400, message="Status must be either 'ongoing', 'completed', 'cancelled' or 'paused'")
 
@@ -257,6 +288,7 @@ class Tickets(Resource):
         return tickets, 201
 
 
+# The Ticket resource is used to manage a specific ticket
 class Ticket(Resource):
     @jwt_required()
     @marshal_with(ticketFields)
@@ -294,6 +326,7 @@ class Ticket(Resource):
         return tickets
 
 
+# The Projects resource is used to manage the projects
 class Projects(Resource):
     @jwt_required()
     @marshal_with(projectFields)
@@ -305,7 +338,6 @@ class Projects(Resource):
     @marshal_with(projectFields)
     def post(self):
         args = project_args.parse_args()
-
         project = ProjectModel(name=args["name"])
         db.session.add(project)
         db.session.commit()
@@ -313,6 +345,7 @@ class Projects(Resource):
         return projects, 201
 
 
+# The Project resource is used to manage a specific project
 class Project(Resource):
     @jwt_required()
     @marshal_with(projectFields)
@@ -345,6 +378,7 @@ class Project(Resource):
         return projects
 
 
+# The Clients resource is used to manage the clients
 class Clients(Resource):
     @jwt_required()
     @marshal_with(clientFields)
@@ -356,7 +390,6 @@ class Clients(Resource):
     @marshal_with(clientFields)
     def post(self):
         args = client_args.parse_args()
-
         client = ClientModel(firstname=args["firstname"], name=args["name"], company=args["company"],
                              email=args["email"], phone=args["phone"])
         db.session.add(client)
@@ -365,6 +398,7 @@ class Clients(Resource):
         return clients, 201
 
 
+# The Client resource is used to manage a specific client
 class Client(Resource):
     @jwt_required()
     @marshal_with(clientFields)
@@ -401,6 +435,7 @@ class Client(Resource):
         return clients
 
 
+# The Auth resource is used to manage the authentication
 class Auth(Resource):
     def post(self):
         parser = reqparse.RequestParser()
@@ -409,28 +444,44 @@ class Auth(Resource):
         args = parser.parse_args()
 
         user = UserModel.query.filter_by(email=args['email']).first()
+        # Check if the user exists and if the password is correct
         if user and bcrypt.checkpw(args['password'].encode('utf-8'), user.password.encode('utf-8')):
             access_token = create_access_token(identity={'id': user.id, 'role': user.role})
-            return {'access_token': access_token}, 200
+            # Return the access token and some user info
+            return {
+                'access_token': access_token,
+                'user_info': {
+                    'id': user.id,
+                    'firstname': user.firstname,
+                    'email': user.email,
+                    'role': user.role
+                }
+            }, 200
         else:
             return {'message': 'Invalid credentials'}, 401
 
 
-"""
 ##########
 # ROUTES #
 ##########
-"""
 
+# Add the routes
+# Users
 api.add_resource(Users, '/api/users/')
 api.add_resource(User, '/api/users/<int:id>')
+# Tickets
 api.add_resource(Tickets, '/api/tickets/')
 api.add_resource(Ticket, '/api/tickets/<int:id>')
+# Projects
 api.add_resource(Projects, '/api/projects/')
 api.add_resource(Project, '/api/projects/<int:id>')
+# Clients
 api.add_resource(Clients, '/api/clients/')
 api.add_resource(Client, '/api/clients/<int:id>')
+# Auth
 api.add_resource(Auth, '/api/auth/')
 
+
 if __name__ == '__main__':
+    # Run the app
     app.run(debug=True)
